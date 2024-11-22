@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Grid Form with Centralized Questions</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        select {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dynamic Grid Form</h1>
+
+    <!-- Machine Selector -->
+    <label for="machine-select">Select Machine:</label>
+    <select id="machine-select">
+        <option value="">--Select--</option>
+        <option value="machine1">Machine 1</option>
+        <option value="machine2">Machine 2</option>
+        <option value="machine3">Machine 3</option>
+    </select>
+
+    <!-- Form Container -->
+    <form id="dynamic-form">
+        <table id="questions-table">
+            <thead>
+                <tr>
+                    <th>Question</th>
+                    <th>Additional Information</th>
+                    <th>Additional Information 2</th>
+                    <th>Additional Information 3</th>
+                    <th>Answer</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rows will be dynamically added here -->
+            </tbody>
+        </table>
+        <button type="submit">Submit</button>
+    </form>
+
+    <script>
+        // Centralized question list
+        const questionBank = {
+            shared: [
+                { id: "q1", question: "Shared Question 1", info1: "Info A1", info2: "Info A2", info3: "Info A3" },
+                { id: "q2", question: "Shared Question 2", info1: "Info B1", info2: "Info B2", info3: "Info B3" }
+            ],
+            specific: {
+                machine1: [
+                    { id: "q3", question: "Machine 1-Specific Question 1", info1: "Info C1", info2: "Info C2", info3: "Info C3" }
+                ],
+                machine2: [
+                    { id: "q4", question: "Machine 2-Specific Question 1", info1: "Info D1", info2: "Info D2", info3: "Info D3" },
+                    { id: "q5", question: "Machine 2-Specific Question 2", info1: "Info E1", info2: "Info E2", info3: "Info E3" }
+                ],
+                machine3: [
+                    { id: "q6", question: "Machine 3-Specific Question 1", info1: "Info F1", info2: "Info F2", info3: "Info F3" }
+                ]
+            }
+        };
+
+        // Machine question mappings
+        const machineQuestions = {
+            machine1: ["q1", "q2", "q3"],
+            machine2: ["q1", "q4", "q5"],
+            machine3: ["q1", "q2", "q6"]
+        };
+
+        // DOM elements
+        const machineSelect = document.getElementById("machine-select");
+        const questionsTableBody = document.querySelector("#questions-table tbody");
+
+        // Event listener for machine selection
+        machineSelect.addEventListener("change", function () {
+            const selectedMachine = machineSelect.value;
+
+            // Clear existing rows
+            questionsTableBody.innerHTML = "";
+
+            if (selectedMachine && machineQuestions[selectedMachine]) {
+                // Get the question IDs for the selected machine
+                const questionIds = machineQuestions[selectedMachine];
+
+                // Dynamically generate rows
+                questionIds.forEach((id) => {
+                    // Find the question data by ID
+                    const question =
+                        questionBank.shared.find((q) => q.id === id) ||
+                        questionBank.specific[selectedMachine].find((q) => q.id === id);
+
+                    if (question) {
+                        const row = document.createElement("tr");
+
+                        // Add columns for each part of the question
+                        row.innerHTML = `
+                            <td>${question.question}</td>
+                            <td>${question.info1}</td>
+                            <td>${question.info2}</td>
+                            <td>${question.info3}</td>
+                            <td>
+                                <select name="${question.id}">
+                                    <option value="">--Select--</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="problem">Problem</option>
+                                </select>
+                            </td>
+                        `;
+
+                        questionsTableBody.appendChild(row);
+                    }
+                });
+            }
+        });
+        document.getElementById('checklist-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            const formData = {
+                Title: document.getElementById('machineName').value,
+                MachineName: document.getElementById('machineName').value,
+                Question1: document.getElementById('question1').value,
+                Question2: document.getElementById('question2').value,
+            };
+
+            try {
+                const response = await submitToSharePoint(formData);
+                if (response.ok) {
+                    alert('Checklist submitted successfully!');
+                    document.getElementById('checklist-form').reset();
+                } else {
+                    alert('Error submitting checklist.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        });
+
+        async function submitToSharePoint(data) {
+            const siteUrl = "https://amcor.sharepoint.com/sites/AFNATerreHaute";
+            const listName = "E1 CIL Checklist Quarterly & Annually";
+            const listUrl = `${siteUrl}/_api/web/lists/GetByTitle('${listName}')/items`;
+
+            const headers = {
+                "Accept": "application/json;odata=verbose",
+                "Content-Type": "application/json;odata=verbose",
+                "X-RequestDigest": document.getElementById("__REQUESTDIGEST").value,
+            };
+
+            const requestBody = JSON.stringify({
+                __metadata: { type: "SP.Data.Machine_x0020_ChecklistListItem" },
+                Title: data.Title,
+                MachineName: data.MachineName,
+                Question1: data.Question1,
+                Question2: data.Question2,
+            });
+
+            return fetch(listUrl, {
+                method: "POST",
+                headers: headers,
+                body: requestBody,
+            });
+        }
+    </script>
+</body>
+</html>
