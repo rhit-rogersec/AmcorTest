@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Machine Inspection Form</title>
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table, th, td {
+      border: 1px solid black;
+    }
+    th, td {
+      padding: 8px;
+      text-align: left;
+    }
+    .completed {
+      background-color: lightgreen;
+    } 
+    .problem {
+      background-color: lightcoral;
+    }
+    /* Styling for the comment box */
+    #comments-container {
+      margin-top: 20px;
+      display: none; /* Initially hidden */
+    }
+  </style>
+</head>
+<body>
+  <h1>Machine Inspection Form</h1>
+  
+  <!-- Machine Selector Dropdown -->
+  <label for="machine-select">Select Machine:</label>
+  <select id="machine-select">
+    <option value="">--Select--</option>
+    <option value="Slt. 5">Slt 5</option>
+    <option value="Slt 6 & 7">Slt 6 & 7</option>
+    <option value="Slt. 8">Slt 8</option>
+    <option value="V-Fold">V-Fold</option>
+    <option value="Roll Dr.">Roll Dr.</option>
+  </select>
+  <button id="load-questions">Load Questions</button>
+
+  <!-- Inspection Form Table -->
+  <form id="inspection-form" style="display:none;">
+    <table id="questions-table">
+      <thead>
+        <tr>
+          <th>Question Number</th>
+          <th>Component</th>
+          <th>Cleaning Tools</th>
+          <th>Operation</th>
+          <th>Machine Status</th>
+          <th>When</th>
+          <th>OPL#</th>
+          <th>User Input</th>
+        </tr>
+      </thead>
+      <tbody id="questions-container"></tbody>
+    </table>
+
+    <!-- Comments Section at the Bottom -->
+    <div id="comments-container">
+      <label for="comments">Additional Comments:</label><br>
+      <textarea id="comments" name="comments" rows="4" cols="50" placeholder="Enter your comments here..."></textarea>
+    </div>
+
+    <button type="submit">Submit</button>
+  </form>
+
+  <script>
+    document.getElementById('load-questions').addEventListener('click', function() {
+      fetch('questionData.json')
+      .then(response => response.json()) // Parse the JSON data
+      .then(data => {
+          const questionBank = data.shared;
+
+          // Get the selected machine
+          const selectedMachine = document.querySelector("#machine-select").value;
+
+          if (!selectedMachine) {
+            alert('Please select a machine first!');
+            return;
+          }
+
+          // Find the questions related to the selected machine
+          const questionIds = questionBank.filter(q => q.machineNumber === selectedMachine);
+
+          if (questionIds.length === 0) {
+            alert('No questions found for the selected machine.');
+            return;
+          }
+
+          // Dynamically generate the table rows for each question
+          const questionsContainer = document.querySelector("#questions-container");
+          questionsContainer.innerHTML = ''; // Clear any existing rows
+          questionIds.forEach((question) => {
+            const row = document.createElement("tr");
+
+            // Add columns for each part of the question
+            row.innerHTML = `
+                <td>${question.Number}</td>
+                <td>${question.Component}</td>
+                <td>${question.CleaningTools}</td>
+                <td>${question.Operation}</td>
+                <td>${question.MachineStatus}</td>
+                <td>${question.When}</td>
+                <td>${question.OPL}</td>
+                <td>
+                <select name="${question.Number}">
+                    <option value="">--Select--</option>
+                    <option value="completed">Completed</option>
+                    <option value="problem">Problem</option>
+                </select>
+                </td>
+            `;
+
+            // Append the row to the table body
+            questionsContainer.appendChild(row);
+
+            // Add event listener to change row color when "Completed" or "Problem" is selected
+            row.querySelector('select').addEventListener('change', function () {
+                if (this.value === 'completed') {
+                  row.classList.add('completed');
+                  row.classList.remove('problem');
+                } else if (this.value === 'problem') {
+                  row.classList.add('problem');
+                  row.classList.remove('completed');
+                } else {
+                  row.classList.remove('completed', 'problem');
+                }
+            });
+          });
+
+          // Show the comment box after questions are loaded
+          document.getElementById('comments-container').style.display = 'block';
+
+          // Show the form
+          document.getElementById('inspection-form').style.display = 'block';
+      })
+      .catch(error => console.error("Error loading JSON data:", error));
+    });
+
+    // Event listener for form submission
+    document.getElementById('inspection-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const formData = {};
+      new FormData(e.target).forEach((value, key) => {
+        formData[key] = value;
+      });
+      console.log('Submitted Data:', formData);
+      alert('Form submitted successfully!');
+    });
+  </script>
+</body>
+</html>
